@@ -34,11 +34,15 @@
 
 	#ifdef BUILD_OPENVDB
 		#include <openvdb/openvdb.h>
+        #include <openvdb/tree/Tree.h>
+        #include <openvdb/tree/RootNode.h>
 		using namespace openvdb;
 
 		// OpenVDB <3,3,3,4> support
-		typedef openvdb::tree::Tree<openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::LeafNode<float,4>,3>,3>,3>>> FloatTree34; 
-		typedef openvdb::tree::Tree<openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::LeafNode<openvdb::Vec3f,4>,3>,3>,3>>> Vec3fTree34; 
+        typedef tree::Tree5<float,3,3,3,4>::Type     FloatTree34 ;
+        typedef tree::Tree5<Vec3f,3,3,3,4>::Type     Vec3fTree34 ;
+//         using FloatTree34 = tree::Tree<tree::RootNode<tree::InternalNode<tree::InternalNode<tree::InternalNode<tree::LeafNode<float,4>,3>,3>,3>>> ; 
+// 		typedef openvdb::tree::Tree<openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::LeafNode<openvdb::Vec3f,4>,3>,3>,3>>> ; 
 		typedef openvdb::Grid<FloatTree34>		FloatGrid34; 
 		typedef openvdb::Grid<Vec3fTree34>		Vec3fGrid34; 
 		typedef FloatGrid34						GridType34;

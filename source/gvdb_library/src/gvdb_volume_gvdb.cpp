@@ -62,9 +62,9 @@ using namespace nvdb;
 	#else
 		#pragma message ( "  OPENVDB_USE_BLOSC = NO" )	
 	#endif
-	#include <openvdb\openvdb.h>
-	#include <openvdb\io\Stream.h>
-	#include <openvdb\tree\LeafNode.h>		// access to leaf buffers
+	#include <openvdb/openvdb.h>
+	#include <openvdb/io/Stream.h>
+	#include <openvdb/tree/LeafNode.h>		// access to leaf buffers
 	#include <openvdb/tools/ValueTransformer.h>
 	#include <fstream>
 	using namespace openvdb;
@@ -232,6 +232,7 @@ void VolumeGVDB::SetDebug ( bool d )
 // Loads a CUDA function into memory from ptx file
 void VolumeGVDB::LoadFunction ( int fid, std::string func, int mid, std::string ptx )
 {
+	ptx = "/local/xu29mapu/projects/gvdb-voxels/source/gvdb_library/build/" + ptx;
 	char cptx[512];		strcpy ( cptx, ptx.c_str() );
 	char cfn[512];		strcpy ( cfn, func.c_str() );
 
@@ -2409,8 +2410,10 @@ bool VolumeGVDB::LoadVDB ( std::string fname )
 
 #ifdef BUILD_OPENVDB
 
-	typedef openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::LeafNode<float,4>,3>,3>,3>>  TreeConfig34;
-	typedef openvdb::tree::Tree< TreeConfig34 > FloatTree34; 
+//     typedef tree::Tree5<float, 3,3,3,4>::Type     TreeConfig34;
+
+// 	typedef openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode<openvdb::tree::LeafNode<float,4>,3>,3>,3>>  TreeConfig34;
+// 	typedef openvdb::tree::Tree< TreeConfig34 > FloatTree34; 
 	typedef openvdb::Grid< FloatTree34 >		FloatGrid34;
 	typedef FloatTree34::RootNodeType			Root34; 
 	typedef FloatTree34::LeafNodeType			Leaf34; 

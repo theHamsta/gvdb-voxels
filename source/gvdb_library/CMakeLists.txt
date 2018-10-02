@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
+
+set( CXX_STANDARD 17 )
+
 if ( WIN32 )
    set(PROJNAME libgvdb)
 else()
@@ -33,7 +36,8 @@ if ( USE_SIMULATION )
    add_definitions(-DSIM_CODE)
 endif()
 
-set ( USE_OPENVDB OFF CACHE BOOL "Use OpenVDB" FORCE)
+set ( USE_OPENVDB ON CACHE BOOL "Use OpenVDB" FORCE)
+add_definitions(-DBUILD_OPENVDB)
 
 set ( USE_NVTX OFF CACHE BOOL "Use NSIGHT Markers" )
 if ( USE_NVTX ) 
@@ -146,7 +150,15 @@ message ( STATUS "Share:   ${SHARE_PATH}" )
 #####################################################################################
 # Linkage
 #
-_LINK ( PROJECT ${PROJNAME} OPT ${LIBRARIES_OPTIMIZED} DEBUG ${LIBRARIES_DEBUG} PLATFORM ${PLATFORM_LIBRARIES} )
+set( OPENVDB_LIBRARIES
+ 							tbb
+							openvdb
+							Half                                                                      
+							IexMath                                                                  
+							Iex                                                                             
+							IlmThread                                                               
+							Imath)
+_LINK ( PROJECT ${PROJNAME} OPT ${LIBRARIES_OPTIMIZED} DEBUG ${LIBRARIES_DEBUG} PLATFORM ${PLATFORM_LIBRARIES} ${OPENVDB_LIBRARIES} )
 
 ################################################################
 # Windows specific

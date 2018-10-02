@@ -4,13 +4,6 @@
 
 
 # outputs
-unset(OPENVDB_DLL CACHE)
-unset(OPENVDB_LIB CACHE)
-unset(OPENVDB_FOUND CACHE)
-unset(OPENVDB_INCLUDE_DIR CACHE)
-unset(OPENVDB_LIB_DIR CACHE)
-unset(OPENVDB_LIB_DEBUG CACHE)
-unset(OPENVDB_LIB_RELEASE CACHE)
 
 
 FUNCTION(package_openvdb_binaries)
@@ -38,7 +31,7 @@ if (OPENVDB_ROOT_DIR AND USE_OPENVDB)
 
   if (WIN32) 	 
     set ( OPENVDB_LIB_DIR "${OPENVDB_ROOT_DIR}/lib64" CACHE PATH "path" )
-	set ( OPENVDB_INCLUDE_DIR "${OPENVDB_ROOT_DIR}/include" CACHE PATH "path" )
+	# set ( OPENVDB_INCLUDE_DIR "${OPENVDB_ROOT_DIR}/include" CACHE PATH "path" )
 	#-- get_filename_component ( LIB_PATH "${OPENVDB_LIB_RELEASE}" DIRECTORY ) 
 
     #-------- Locate DLL
@@ -63,7 +56,7 @@ if (OPENVDB_ROOT_DIR AND USE_OPENVDB)
   endif(UNIX)
 
   #-------- Locate HEADERS
-  _find_files( OPENVDB_HEADERS OPENVDB_INCLUDE_DIR "Openvdb/openvdb.h" )
+  # set( OPENVDB_HEADERS OPENVDB_INCLUDE_DIR "openvdb/openvdb.h" )
 
   if (OPENVDB_DLL)
 	  set( OPENVDB_FOUND "YES" )      
