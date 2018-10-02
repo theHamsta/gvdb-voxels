@@ -20,7 +20,8 @@
 // Version 1.0: Rama Hoetzlein, 5/1/2017
 // Version 1.1: Rama Hoetzlein, 3/25/2018
 //----------------------------------------------------------------------------------
-
+#pragma once
+#include "gvdb.h"
 #include "gvdb_allocator.h"
 #include "gvdb_volume_3D.h"
 #include "gvdb_volume_gvdb.h"
@@ -72,7 +73,7 @@ using namespace nvdb;
 
 #define	MRES	2048
 
-#ifdef BUILD_OPENVDB
+// #ifdef BUILD_OPENVDB
 	// OpenVDB helper
 	class OVDBGrid {
 	public:
@@ -92,7 +93,7 @@ using namespace nvdb;
 		openvdb::tree::LeafNode<float, 4U>::Buffer buf4U;	// 2^4 leaf res
 		openvdb::tree::LeafNode<Vec3f, 4U>::Buffer buf4VU;
 	};
-#endif
+// #endif
 
 Vector3DI VolumeGVDB::getVersion() {
 	return Vector3DI(MAJOR_VERSION, MINOR_VERSION, 0);

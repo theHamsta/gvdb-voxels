@@ -1,3 +1,4 @@
+#pragma once
 //--------------------------------------------------------------------------------
 // NVIDIA(R) GVDB VOXELS
 // Copyright 2016-2018, NVIDIA Corporation. 
@@ -21,8 +22,6 @@
 //----------------------------------------------------------------------------------
 
 
-#ifndef GVDB_VEC
-	#define GVDB_VEC
 
 	#include "gvdb_types.h"
 	#include <stdlib.h>
@@ -41,7 +40,7 @@
 
 	namespace nvdb {
 
-	class GVDB_API Vector3DI {
+	class Vector3DI {
 	public:
 		VTYPE x, y, z;
 	
@@ -349,10 +348,7 @@
 	#undef VNAME
 	#undef VTYPE
 
-#endif
 
-#ifndef MATRIX_DEF
-	#define MATRIX_DEF
 		
 	#include <stdio.h>
 	#include <iostream>
@@ -458,4 +454,3 @@
 	#undef VNAME
 	#undef VTYPE
 
-#endif

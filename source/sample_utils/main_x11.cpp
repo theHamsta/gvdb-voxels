@@ -73,7 +73,7 @@ static int ctxErrorHandler(Display *dpy, XErrorEvent *evt){
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-#ifdef _DEBUG
+ #ifdef _DEBUG
 static void APIENTRY myOpenGLCallback(  GLenum source,
                         GLenum type,
                         GLuint id,
@@ -163,6 +163,7 @@ static void APIENTRY myOpenGLCallback(  GLenum source,
   }
 }
 
+ #endif
 //------------------------------------------------------------------------------
 void checkGL( char* msg )
 {
@@ -170,11 +171,10 @@ void checkGL( char* msg )
     //const GLubyte* errString;
     errCode = glGetError();
     if (errCode != GL_NO_ERROR) {
-        //printf ( "%s, ERROR: %s\n", msg, gluErrorString(errCode) );
-        LOGE("%s, ERROR: 0x%x\n", msg, errCode );
+//         printf ( "%s, ERROR: %s\n", msg, gluErrorString(errCode) );
+        printf("%s, ERROR: 0x%x\n", msg, errCode );
     }
 }
-#endif
 
 struct WINinternal{
     NVPWindow *m_win;

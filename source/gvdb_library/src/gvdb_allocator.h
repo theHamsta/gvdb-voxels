@@ -1,4 +1,4 @@
-
+#pragma once
 //--------------------------------------------------------------------------------
 // NVIDIA(R) GVDB VOXELS
 // Copyright 2016-2018, NVIDIA Corporation. 
@@ -24,11 +24,13 @@
 #ifndef DEF_ALLOCATOR
 	#define DEF_ALLOCATOR
 
+//     #include "gvdb.h"     
 	#include "gvdb_types.h"		
 	#include "gvdb_vec.h"
+// #include "gvdb.h"
 	#include <vector>
+    #include <stdio.h>
 	#include <cuda.h>
-	using namespace nvdb;
 
 	// Maximum number of GVDB Pool levels
 	#define MAX_POOL		10
@@ -38,15 +40,15 @@
 	#define MIN_COMPUTE_VERSION		0x20
 	extern void				StartCuda( int devsel, CUcontext ctxsel, CUdevice& dev, CUcontext& ctx, CUstream* strm, bool verbose );
 	extern GVDB_API bool	cudaCheck ( CUresult e, char* obj, char* method, char* apicall, char* arg, bool bDebug);
-	extern GVDB_API Vector3DF cudaGetMemUsage();
+	extern GVDB_API nvdb::Vector3DF cudaGetMemUsage();
+    namespace nvdb {
 
-	namespace nvdb {
 
 	class Allocator;
 	
 	// Pool Pointer
 	// Smart pointer for all CPU/GPU pointers 
-	struct GVDB_API DataPtr {
+	struct DataPtr {
 		DataPtr ();		
 		char		type;				// data type
 		char		apron;				// apron size

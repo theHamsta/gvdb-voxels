@@ -19,11 +19,12 @@
 // Version 1.0: Rama Hoetzlein, 5/1/2017
 // Version 1.1: Rama Hoetzlein, 3/25/2018
 //----------------------------------------------------------------------------------
+#include "cuda.h"
 #include "gvdb_render.h"
 
 
 #ifdef BUILD_OPENGL
-
+namespace nvdb {
 	void gchkGL ( char* msg )
 	{
 		GLenum errCode;
@@ -214,4 +215,5 @@
 		//scene->getScreenquad().Draw(1);
 	}
 
+}
 #endif

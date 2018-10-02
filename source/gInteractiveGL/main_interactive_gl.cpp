@@ -1,8 +1,12 @@
 
 
 // GVDB library
-#include "gvdb.h"			
+#include "gvdb.h"
 using namespace nvdb;
+#include <stdlib.h>
+#include <stdio.h>
+#include "gvdb_volume_gvdb.h"
+#include <GL/glew.h>
 
 // Sample utils
 #include "main.h"			// window system 
@@ -10,32 +14,33 @@ using namespace nvdb;
 
 VolumeGVDB	gvdb;
 
-class Sample : public NVPWindow {
-public:
-	virtual bool init();
-	virtual void display();
-	virtual void reshape(int w, int h);
-	virtual void motion(int x, int y, int dx, int dy);
-	virtual void mouse (NVPWindow::MouseButton button, NVPWindow::ButtonAction state, int mods, int x, int y);
+class Sample : public NVPWindow
+{
+	public:
+		virtual bool init();
+		virtual void display();
+		virtual void reshape( int w, int h );
+		virtual void motion( int x, int y, int dx, int dy );
+		virtual void mouse ( NVPWindow::MouseButton button, NVPWindow::ButtonAction state, int mods, int x, int y );
 
-	int			gl_screen_tex;
-	int			mouse_down;
+		int			gl_screen_tex;
+		int			mouse_down;
 
-	Vector3DF	m_pretrans, m_scale, m_angs, m_trans;
+		Vector3DF	m_pretrans, m_scale, m_angs, m_trans;
 };
 
 
-bool Sample::init() 
+bool Sample::init()
 {
 	int w = getWidth(), h = getHeight();			// window width & height
 	mouse_down = -1;
-	gl_screen_tex = -1;	
-	m_pretrans.Set(-125, -160, -125);
-	m_scale.Set(1, 1, 1);
-	m_angs.Set(0, 0, 0);
-	m_trans.Set(0, 0, 0);	
+	gl_screen_tex = -1;
+	m_pretrans.Set( -125, -160, -125 );
+	m_scale.Set( 1, 1, 1 );
+	m_angs.Set( 0, 0, 0 );
+	m_trans.Set( 0, 0, 0 );
 
-	// Initialize GVDB	
+	// Initialize GVDB
 	gvdb.SetVerbose ( true );
 	gvdb.SetCudaDevice ( GVDB_DEV_FIRST );
 	gvdb.Initialize ();
@@ -44,56 +49,79 @@ bool Sample::init()
 	gvdb.AddPath ( ASSET_PATH );
 
 	// Load VBX
-	char scnpath[1024];		
+	char scnpath[1024];
+
 	if ( !gvdb.getScene()->FindFile ( "explosion.vbx", scnpath ) ) {
 		nvprintf ( "Cannot find vbx file.\n" );
 		nverror();
 	}
+
 	printf ( "Loading VBX. %s\n", scnpath );
+//     char scnpath[1024];
+
+    if ( !gvdb.getScene()->FindFile ( "/local/xu29mapu/projects/gvdb-voxels/source/shared_assets/" "bunny.vdb", scnpath ) ) {
+        gprintf ( "Cannot find vdb file.\n" );
+        gerror();
+    }
 	gvdb.SetChannelDefault ( 16, 16, 16 );
-	gvdb.LoadVBX ( scnpath );	
+    if ( !gvdb.LoadVDB ( scnpath ) ) {                  // Load OpenVDB format
+        gerror();
+    }
+// 	gvdb.LoadVBX ( scnpath );
 
 	// Set volume params
-	gvdb.SetTransform(m_pretrans, m_scale, m_angs, m_trans);
+	gvdb.SetTransform( m_pretrans, m_scale, m_angs, m_trans );
 	gvdb.getScene()->SetSteps ( .25, 16, .25 );				// Set raycasting steps
-	gvdb.getScene()->SetExtinct ( -1.0f, 1.0f, 0.0f );		// Set volume extinction
+	gvdb.getScene()->SetExtinct ( -1.0f, 1.5f, 0.0f );		// Set volume extinction
 	gvdb.getScene()->SetVolumeRange ( 0.1f, 0.0f, .5f );	// Set volume value range
+    gvdb.getScene()->SetVolumeRange ( 0.0f, 1.0f, -1.0f );  // Set volume value range (for a level set)
 	gvdb.getScene()->SetCutoff ( 0.005f, 0.005f, 0.0f );
 	gvdb.getScene()->SetBackgroundClr ( 0.1f, 0.2f, 0.4f, 1.0 );
-	gvdb.getScene()->LinearTransferFunc(0.00f, 0.25f, Vector4DF(0, 0, 0, 0), Vector4DF(1, 0, 0, 0.05f));
-	gvdb.getScene()->LinearTransferFunc(0.25f, 0.50f, Vector4DF(1, 0, 0, 0.05f), Vector4DF(1, .5f, 0, 0.1f));
-	gvdb.getScene()->LinearTransferFunc(0.50f, 0.75f, Vector4DF(1, .5f, 0, 0.1f), Vector4DF(1, 1, 0, 0.15f));
-	gvdb.getScene()->LinearTransferFunc(0.75f, 1.00f, Vector4DF(1, 1, 0, 0.15f), Vector4DF(1, 1, 1, 0.2f));
+	gvdb.getScene()->LinearTransferFunc( 0.00f, 0.25f, Vector4DF( 0, 0, 0, 0 ), Vector4DF( 1, 0, 0, 0.05f ) );
+	gvdb.getScene()->LinearTransferFunc( 0.25f, 0.50f, Vector4DF( 1, 0, 0, 0.05f ), Vector4DF( 1, .5f, 0, 0.1f ) );
+	gvdb.getScene()->LinearTransferFunc( 0.50f, 0.75f, Vector4DF( 1, .5f, 0, 0.1f ), Vector4DF( 1, 1, 0, 0.15f ) );
+	gvdb.getScene()->LinearTransferFunc( 0.75f, 1.00f, Vector4DF( 1, 1, 0, 0.15f ), Vector4DF( 1, 1, 1, 0.2f ) );
 	gvdb.CommitTransferFunc ();
+//     gvdb.getScene()->SetSteps ( 0.25, 16, 0.25 );               // Set raycasting steps
+//     gvdb.getScene()->SetExtinct ( -1.0f, 1.5f, 0.0f );      // Set volume extinction
+//     gvdb.getScene()->SetVolumeRange ( 0.0f, 1.0f, -1.0f );  // Set volume value range (for a level set)
+//     gvdb.getScene()->SetCutoff ( 0.005f, 0.01f, 0.0f );
+//     gvdb.getScene()->LinearTransferFunc ( 0.00f, 0.25f, Vector4DF( 1, 1, 0, 0.05f ), Vector4DF( 1, 1, 0, 0.03f ) );
+//     gvdb.getScene()->LinearTransferFunc ( 0.25f, 0.50f, Vector4DF( 1, 1, 1, 0.03f ), Vector4DF( 1, 0, 0, 0.02f ) );
+//     gvdb.getScene()->LinearTransferFunc ( 0.50f, 0.75f, Vector4DF( 1, 0, 0, 0.02f ), Vector4DF( 1, .5f, 0, 0.01f ) );
+//     gvdb.getScene()->LinearTransferFunc ( 0.75f, 1.00f, Vector4DF( 1, .5f, 0, 0.01f ), Vector4DF( 0, 0, 0, 0.005f ) );
+//     gvdb.getScene()->SetBackgroundClr ( 0, 0, 0, 1 );
+//     gvdb.CommitTransferFunc ();
 
 
-	// Create Camera 
-	Camera3D* cam = new Camera3D;						
+	// Create Camera
+	Camera3D* cam = new Camera3D;
 	cam->setFov ( 50.0 );
-	cam->setOrbit ( Vector3DF(20,30,0), Vector3DF(0,0,0), 700, 1.0 );	
+	cam->setOrbit ( Vector3DF( 20, 30, 0 ), Vector3DF( 0, 0, 0 ), 700, 1.0 );
 	gvdb.getScene()->SetCamera( cam );
-	
+
 	// Create Light
-	Light* lgt = new Light;								
-	lgt->setOrbit ( Vector3DF(299,57.3f,0), Vector3DF(132,-20,50), 200, 1.0 );
-	gvdb.getScene()->SetLight ( 0, lgt );	
+	Light* lgt = new Light;
+	lgt->setOrbit ( Vector3DF( 299, 57.3f, 0 ), Vector3DF( 132, -20, 50 ), 200, 1.0 );
+	gvdb.getScene()->SetLight ( 0, lgt );
 
 	// Add render buffer
 	nvprintf ( "Creating screen buffer. %d x %d\n", w, h );
-	gvdb.AddRenderBuf ( 0, w, h, 4 );	
+	gvdb.AddRenderBuf ( 0, w, h, 4 );
+    gvdb.Render ( SHADE_LEVELSET, 0, 0 );           // Render as volume
 
 	// Create opengl texture for display
 	// This is a helper func in sample utils (not part of gvdb),
 	// which creates or resizes an opengl 2D texture.
 	createScreenQuadGL ( &gl_screen_tex, w, h );
 
-	return true; 
+	return true;
 }
 
-void Sample::reshape (int w, int h)
+void Sample::reshape ( int w, int h )
 {
 	// Resize the opengl screen texture
-	glViewport(0, 0, w, h);
+	glViewport( 0, 0, w, h );
 	createScreenQuadGL ( &gl_screen_tex, w, h );
 
 	// Resize the GVDB render buffers
@@ -102,10 +130,10 @@ void Sample::reshape (int w, int h)
 	postRedisplay();
 }
 
-void Sample::display() 
+void Sample::display()
 {
-	m_angs.y += 0.05;		
-	gvdb.SetTransform(m_pretrans, m_scale, m_angs, m_trans);
+	m_angs.y += 0.05;
+	gvdb.SetTransform( m_pretrans, m_scale, m_angs, m_trans );
 
 	// Render volume
 	gvdb.TimerStart ();
@@ -126,50 +154,50 @@ void Sample::display()
 	postRedisplay();
 }
 
-void Sample::motion(int x, int y, int dx, int dy) 
+void Sample::motion( int x, int y, int dx, int dy )
 {
 	// Get camera for GVDB Scene
-	Camera3D* cam = gvdb.getScene()->getCamera();	
+	Camera3D* cam = gvdb.getScene()->getCamera();
 
-	switch ( mouse_down ) {	
-	case NVPWindow::MOUSE_BUTTON_LEFT: {
-		// Adjust orbit angles
-		Vector3DF angs = cam->getAng();
-		angs.x += dx*0.2f;
-		angs.y -= dy*0.2f;
-		cam->setOrbit ( angs, cam->getToPos(), cam->getOrbitDist(), cam->getDolly() );				
-		postRedisplay();	// Update display
+	switch ( mouse_down ) {
+		case NVPWindow::MOUSE_BUTTON_LEFT: {
+			// Adjust orbit angles
+			Vector3DF angs = cam->getAng();
+			angs.x += dx * 0.2f;
+			angs.y -= dy * 0.2f;
+			cam->setOrbit ( angs, cam->getToPos(), cam->getOrbitDist(), cam->getDolly() );
+			postRedisplay();	// Update display
 		} break;
-	
-	case NVPWindow::MOUSE_BUTTON_MIDDLE: {
-		// Adjust target pos		
-		cam->moveRelative ( float(dx) * cam->getOrbitDist()/1000, float(-dy) * cam->getOrbitDist()/1000, 0 );	
-		postRedisplay();	// Update display
+
+		case NVPWindow::MOUSE_BUTTON_MIDDLE: {
+			// Adjust target pos
+			cam->moveRelative ( float( dx ) * cam->getOrbitDist() / 1000, float( -dy ) * cam->getOrbitDist() / 1000, 0 );
+			postRedisplay();	// Update display
 		} break;
-	
-	case NVPWindow::MOUSE_BUTTON_RIGHT: {	
-		// Adjust dist
-		float dist = cam->getOrbitDist();
-		dist -= dy;
-		cam->setOrbit ( cam->getAng(), cam->getToPos(), dist, cam->getDolly() );		
-		postRedisplay();	// Update display
+
+		case NVPWindow::MOUSE_BUTTON_RIGHT: {
+			// Adjust dist
+			float dist = cam->getOrbitDist();
+			dist -= dy;
+			cam->setOrbit ( cam->getAng(), cam->getToPos(), dist, cam->getDolly() );
+			postRedisplay();	// Update display
 		} break;
 	}
 }
 
-void Sample::mouse ( NVPWindow::MouseButton button, NVPWindow::ButtonAction state, int mods, int x, int y)
+void Sample::mouse ( NVPWindow::MouseButton button, NVPWindow::ButtonAction state, int mods, int x, int y )
 {
 	// Track when we are in a mouse drag
-	mouse_down = (state == NVPWindow::BUTTON_PRESS) ? button : -1;	
+	mouse_down = ( state == NVPWindow::BUTTON_PRESS ) ? button : -1;
 }
 
-int sample_main ( int argc, const char** argv ) 
+int sample_main ( int argc, const char** argv )
 {
 	Sample sample_obj;
 	return sample_obj.run ( "NVIDIA(R) GVDB Voxels - gInteractveGL", "intergl", argc, argv, 1024, 768, 4, 5 );
 }
 
-void sample_print( int argc, char const *argv)
+void sample_print( int argc, char const* argv )
 {
 }
 

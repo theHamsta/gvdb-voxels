@@ -20,6 +20,7 @@
 // Version 1.1: Rama Hoetzlein, 3/25/2018
 //----------------------------------------------------------------------------------
 
+#include "gvdb.h"
 #include "gvdb_volume_3D.h"
 #include "gvdb_render.h"
 #include "app_perf.h"

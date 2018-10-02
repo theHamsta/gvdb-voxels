@@ -23,19 +23,20 @@
 #ifndef DEF_VOL_BASE
 	#define DEF_VOL_BASE
 	
-	#include "gvdb_allocator.h"
+    #include "gvdb_allocator.h"
 	#include "gvdb_types.h"
 	#include "gvdb_vec.h"
+    #include "gvdb_scene.h"
+    #include "gvdb_model.h"
 	#include <stdint.h>		
 	#include <stdarg.h>
+#include <cuda.h>
+    #include "gvdb.h"
 
 	#pragma warning( disable : 4251 )
 
 	namespace nvdb {
 
-	class Scene;
-	class Model;
-	class Allocator;
 
 	class VolStats {
 		float		mem_used;			// in MB
@@ -47,7 +48,7 @@
 		float		render_time;		// in millisec
 	};
 
-	class GVDB_API VolumeBase {
+	class  VolumeBase {
 	public:		
 
 		// Commit model geometry to GPU

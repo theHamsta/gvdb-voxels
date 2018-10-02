@@ -22,6 +22,8 @@
 // Chris Wyman (9/2/2014)                                    
 //
 
+
+#include "gvdb.h"
 #include "loader_OBJReader.h"
 
 #include <stdio.h>

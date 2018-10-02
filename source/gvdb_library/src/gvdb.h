@@ -22,8 +22,9 @@
 #ifndef DEF_GVDB
 	#define DEF_GVDB
 
+    #include "gvdb_vec.h"
+    #include "cuda.h"
 	#include "gvdb_types.h"
-	#include "gvdb_vec.h"
 	#include "gvdb_allocator.h"
 	#include "gvdb_render.h"
 	#include "gvdb_scene.h"

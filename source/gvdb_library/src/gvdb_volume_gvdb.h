@@ -22,10 +22,13 @@
 
 #ifndef DEF_VOL_GVDB
 	#define DEF_VOL_GVDB
+	struct DataPtr;
 
+    #include "cuda.h"
 	#include "gvdb_types.h"
 	#include "gvdb_node.h"	
 	#include "gvdb_volume_base.h"
+    #include "gvdb_volume_3D.h"
 	#include "gvdb_allocator.h"		
 
 	using namespace nvdb;
@@ -60,10 +63,10 @@
 
 	#define MAXLEV			10
 
-	class OVDBGrid;
-	class Volume3D;
 
+    class OVDBGrid;
 	namespace nvdb {
+    class Volume3D;
 
 	struct AtlasNode {
 		Vector3DI	mPos;	
@@ -343,9 +346,9 @@
 		Vector3DF	cover;
 		int			icnt;
 	};
-
-	
-	class GVDB_API VolumeGVDB : public VolumeBase {
+    
+    
+	class VolumeGVDB : public nvdb::VolumeBase {
 	public:
 			VolumeGVDB ();			
 			

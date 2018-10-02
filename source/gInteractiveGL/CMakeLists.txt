@@ -7,6 +7,8 @@ Message(STATUS "Processing Project ${PROJNAME}:")
 ####################################################################################
 # Bootstrap
 #
+
+include_directories( /local/xu29mapu/projects/gvdb-voxels/source/gvdb_library/src/ )
 set( BASE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 find_path ( HELPERS "Helpers.cmake" HINTS 
     ${CMAKE_MODULE_PATH}
@@ -27,6 +29,7 @@ set ( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} CACHE PATH "Full path to gvdb/sampl
 set( EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH "Executable path" )
 include( ${CMAKE_MODULE_PATH}/Helpers.cmake )     
 include( ${CMAKE_MODULE_PATH}/Packages.cmake )   
+find_package(Boost REQUIRED)
 
 #####################################################################################
 # Sample requirements
@@ -48,12 +51,14 @@ _add_package_Utils()
 #
 #_add_package_GVDB()
 
+add_definitions(-DBUILD_OPENVDB)
 set( GVDB_INCLUDE_DIR ~/.local/include )
 
 ####################################################################################
 # Add CUDA
 #
 _add_package_CUDA()
+
 
 ####################################################################################
 # Compile PTX Files
@@ -65,7 +70,7 @@ _COMPILEPTX ( SOURCES ${CUDA_FILES} TARGET_PATH ${EXECUTABLE_OUTPUT_PATH} GENERA
 #####################################################################################
 # Add OptiX 
 #
-_add_package_Optix()
+# _add_package_Optix()
 
 #####################################################################################
 # Asset Path
@@ -89,7 +94,17 @@ set_property ( TARGET ${PROJNAME} APPEND PROPERTY DEPENDS ${PTX_SOURCES} )
 #####################################################################################
 # Additional Libraries
 #
-_LINK ( PROJECT ${PROJNAME} OPT ${LIBRARIES_OPTIMIZED} DEBUG ${LIBRARIES_DEBUG} PLATFORM ${PLATFORM_LIBRARIES} )
+set( OPENVDB_LIBRARIES
+                            tbb
+                            openvdb
+                            Half                                                                      
+                            IexMath                                                                  
+                            Iex                                                                             
+                            IlmThread                                                               
+                            Imath)
+# _LINK ( PROJECT ${PROJNAME} ${LIBRARIES_OPTIMIZED} ${LIBRARIES_DEBUG} GL /local/xu29mapu/projects/gvdb-voxels/source/gvdb_library/build/libgvdb.so  ${PLATFORM_LIBRARIES} )
+target_link_libraries(${PROJNAME} PUBLIC /local/xu29mapu/projects/gvdb-voxels/source/gvdb_library/build/libgvdb.so 
+/local/xu29mapu/projects/cudpp/release/lib/libcudpp.a ${CUDA_LIBRARIES} ${OPENVDB_LIBRARIES} GL X11 ${Boost_LIBRARIES} )
 
 #####################################################################################
 # Windows specific

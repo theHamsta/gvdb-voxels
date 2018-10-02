@@ -20,6 +20,7 @@
 // Version 1.1: Rama Hoetzlein, 3/25/2018
 //----------------------------------------------------------------------------------
 
+#include "gvdb.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <GL/glew.h>
