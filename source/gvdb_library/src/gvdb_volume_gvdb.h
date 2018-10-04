@@ -385,6 +385,9 @@
 			// File I/O
 			bool LoadBRK ( std::string fname );
 			bool LoadVDB ( std::string fname );
+#ifdef BUILD_OPENVDB
+            bool LoadVDB ( openvdb::GridBase::Ptr grid );
+#endif
 			bool LoadVBX ( std::string fname, int force_maj=0, int force_min=0 );
 			void SaveVBX ( std::string fname );
 			void SaveVDB ( std::string fname );

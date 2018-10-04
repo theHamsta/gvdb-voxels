@@ -20,7 +20,6 @@
 // Version 1.0: Rama Hoetzlein, 5/1/2017
 // Version 1.1: Rama Hoetzlein, 3/25/2018
 //----------------------------------------------------------------------------------
-#pragma once
 #include "gvdb.h"
 #include "gvdb_allocator.h"
 #include "gvdb_volume_3D.h"
@@ -2157,256 +2156,262 @@ bool VolumeGVDB::LoadBRK ( std::string fname )
 }
 
 
+bool VolumeGVDB::LoadVDB(openvdb::GridBase::Ptr baseGrid)
+{
+
+    
+#ifdef BUILD_OPENVDB
+
+    openvdb::initialize (); 
+    FloatGrid34::registerGrid();    
+    //FloatGridVF34::registerGrid();
+
+    mOVDB = new OVDBGrid;
+
+    CoordBBox box;
+    Coord orig;
+    Vector3DF p0, p1;
+
+    PERF_PUSH ( "Clear grid" );
+
+    if ( mOVDB->grid543F != 0x0 )   mOVDB->grid543F.reset();        
+    if ( mOVDB->grid543VF != 0x0 )  mOVDB->grid543VF.reset();       
+    if ( mOVDB->grid34F != 0x0 )    mOVDB->grid34F.reset();     
+    if ( mOVDB->grid34VF != 0x0 )   mOVDB->grid34VF.reset();                
+
+    PERF_POP ();
+
+
+    // Initialize GVDB config
+    Vector3DF voxelsize;
+    int gridtype = 0;
+
+    bool isFloat = false;
+
+    verbosef ( "   Configuring GVDB.\n");
+    if ( baseGrid->isType< FloatGrid543 >() ) {
+        gridtype = 0;
+        isFloat = true;
+        mOVDB->grid543F = openvdb::gridPtrCast< FloatGrid543 >(baseGrid);   
+        voxelsize.Set ( mOVDB->grid543F->voxelSize().x(), mOVDB->grid543F->voxelSize().y(), mOVDB->grid543F->voxelSize().z() );         
+        Configure ( 5, 5, 5, 4, 3 );
+    }
+    if ( baseGrid->isType< Vec3fGrid543 >() ) {
+        gridtype = 0;
+        isFloat = false;
+        mOVDB->grid543VF = openvdb::gridPtrCast< Vec3fGrid543 >(baseGrid);  
+        voxelsize.Set ( mOVDB->grid543VF->voxelSize().x(), mOVDB->grid543VF->voxelSize().y(), mOVDB->grid543VF->voxelSize().z() );  
+        Configure ( 5, 5, 5, 4, 3 );
+    }    
+    if ( baseGrid->isType< FloatGrid34 >() ) {
+        gridtype = 1;
+        isFloat = true;
+        mOVDB->grid34F = openvdb::gridPtrCast< FloatGrid34 >(baseGrid); 
+        voxelsize.Set ( mOVDB->grid34F->voxelSize().x(), mOVDB->grid34F->voxelSize().y(), mOVDB->grid34F->voxelSize().z() );    
+        Configure ( 3, 3, 3, 3, 4 );
+    }
+    if ( baseGrid->isType< Vec3fGrid34 >() ) {
+        gridtype = 1;
+        isFloat = false;
+        mOVDB->grid34VF = openvdb::gridPtrCast< Vec3fGrid34 >(baseGrid);    
+        voxelsize.Set ( mOVDB->grid34VF->voxelSize().x(), mOVDB->grid34VF->voxelSize().y(), mOVDB->grid34VF->voxelSize().z() ); 
+        Configure ( 3, 3, 3, 3, 4 );
+    }
+    SetVoxelSize ( voxelsize.x, voxelsize.y, voxelsize.z );
+    SetApron ( 1 );
+
+    float pused = MeasurePools ();
+    verbosef( "   Topology Used: %6.2f MB\n", pused );
+    
+    slong leaf;
+    int leaf_start = 0;             // starting leaf        gScene.mVLeaf.x;        
+    int n, leaf_max, leaf_cnt = 0;
+    Vector3DF vclipmin, vclipmax, voffset;
+    vclipmin = getScene()->mVClipMin;
+    vclipmax = getScene()->mVClipMax;   
+
+    // Determine Volume bounds
+    verbosef( "   Compute volume bounds.\n");
+    vdbSkip ( mOVDB, leaf_start, gridtype, isFloat );
+    for (leaf_max=0; vdbCheck ( mOVDB, gridtype, isFloat ); ) {
+        vdbOrigin ( mOVDB, orig, gridtype, isFloat );
+        p0.Set ( orig.x(), orig.y(), orig.z() );
+        if ( p0.x > vclipmin.x && p0.y > vclipmin.y && p0.z > vclipmin.z && p0.x < vclipmax.x && p0.y < vclipmax.y && p0.z < vclipmax.z ) {     // accept condition
+            if ( leaf_max== 0 ) {
+                mVoxMin = p0; mVoxMax = p0; 
+            } else {
+                if ( p0.x < mVoxMin.x ) mVoxMin.x = p0.x;
+                if ( p0.y < mVoxMin.y ) mVoxMin.y = p0.y;
+                if ( p0.z < mVoxMin.z ) mVoxMin.z = p0.z;
+                if ( p0.x > mVoxMax.x ) mVoxMax.x = p0.x;
+                if ( p0.y > mVoxMax.y ) mVoxMax.y = p0.y;
+                if ( p0.z > mVoxMax.z ) mVoxMax.z = p0.z;               
+            }           
+            leaf_max++;
+        }
+        vdbNext ( mOVDB, gridtype, isFloat );
+    }   
+    voffset = mVoxMin * -1;     // offset to positive space (hack)  
+    
+    // Activate Space
+    PERF_PUSH ( "Activate" );   
+    n = 0;
+    verbosef ( "   Activating space.\n");
+
+    vdbSkip ( mOVDB, leaf_start, gridtype, isFloat );
+    for (leaf_max=0; vdbCheck ( mOVDB, gridtype, isFloat ) ; ) {
+            
+        // Read leaf position
+        vdbOrigin ( mOVDB, orig, gridtype, isFloat );
+        p0.Set ( orig.x(), orig.y(), orig.z() );
+        p0 += voffset;
+
+        if ( p0.x > vclipmin.x && p0.y > vclipmin.y && p0.z > vclipmin.z && p0.x < vclipmax.x && p0.y < vclipmax.y && p0.z < vclipmax.z ) {     // accept condition
+            // only accept those in clip volume
+            bool bnew = false;
+            leaf = ActivateSpace ( mRoot, p0, bnew );
+            leaf_ptr.push_back ( leaf );                
+            leaf_pos.push_back ( p0 );
+            if ( leaf_max==0 ) { 
+                mVoxMin = p0; mVoxMax = p0; 
+                verbosef ( "   First leaf: %d  (%f %f %f)\n", leaf_start+n, p0.x, p0.y, p0.z );
+            }
+            leaf_max++;             
+        }
+        vdbNext ( mOVDB, gridtype, isFloat );
+        n++;
+    }   
+
+    // Finish Topology
+    FinishTopology ();
+    
+    PERF_POP ();        // Activate
+
+    // Resize Atlas
+    //verbosef ( "   Create Atlas. Free before: %6.2f MB\n", cudaGetFreeMem() );
+    PERF_PUSH ( "Atlas" );      
+    DestroyChannels ();
+    AddChannel ( 0, T_FLOAT, mApron, F_LINEAR );
+    UpdateAtlas ();
+    PERF_POP ();
+    //verbosef ( "   Create Atlas. Free after:  %6.2f MB, # Leaf: %d\n", cudaGetFreeMem(), leaf_max );
+
+    // Resize temp 3D texture to match leaf res
+    int res0 = getRes ( 0 );    
+    Vector3DI vres0 ( res0, res0, res0 );       // leaf resolution
+    Vector3DF vrange0 = getRange(0);
+    
+    Volume3D vtemp ( mScene ) ;
+    vtemp.Resize ( T_FLOAT, vres0, 0x0, false );
+
+    vclipmin = getScene()->mVClipMin;
+    vclipmax = getScene()->mVClipMax;   
+
+    // Read brick data
+    PERF_PUSH ( "Read bricks" );    
+
+    // Advance to starting leaf     
+    vdbSkip ( mOVDB, leaf_start, gridtype, isFloat );
+
+    float* src;
+    float* src2 = (float*) malloc ( res0*res0*res0*sizeof(float) );     // velocity field
+    float mValMin, mValMax;
+    mValMin = 1.0E35; mValMax = -1.0E35; 
+
+    // Fill atlas from leaf data
+    int percl = 0, perc = 0;
+    verbosef ( "   Loading bricks.\n");
+    for (leaf_cnt=0; vdbCheck ( mOVDB, gridtype, isFloat ); ) {
+
+        // read leaf position
+        vdbOrigin ( mOVDB, orig, gridtype, isFloat );       
+        p0.Set ( orig.x(), orig.y(), orig.z() );
+        p0 += voffset;
+
+        if ( p0.x > vclipmin.x && p0.y > vclipmin.y && p0.z > vclipmin.z && p0.x < vclipmax.x && p0.y < vclipmax.y && p0.z < vclipmax.z ) {     // accept condition         
+            
+            // get leaf 
+            if ( gridtype==0 ) {
+                if ( isFloat ) {
+                    mOVDB->buf3U = (*mOVDB->iter543F).buffer();             
+                    src = mOVDB->buf3U.data();
+                } else {
+                    mOVDB->buf3VU = (*mOVDB->iter543VF).buffer();
+                    src = ConvertToScalar ( res0*res0*res0, (float*) mOVDB->buf3VU.data(), src2, mValMin, mValMax );                
+                }           
+            } else {
+                if ( isFloat ) {
+                    mOVDB->buf4U = (*mOVDB->iter34F).buffer();              
+                    src = mOVDB->buf4U.data();
+                } else {
+                    mOVDB->buf4VU = (*mOVDB->iter34VF).buffer();
+                    src = ConvertToScalar ( res0*res0*res0, (float*) mOVDB->buf4VU.data(), src2, mValMin, mValMax );                
+                }
+            }           
+            // Copy data from CPU into temporary 3D texture
+            vtemp.SetDomain ( leaf_pos[leaf_cnt], leaf_pos[leaf_cnt] + vrange0 );               
+            vtemp.CommitFromCPU ( src );
+
+            // Copy from 3D texture into Atlas brick
+            Node* node = getNode ( leaf_ptr[leaf_cnt] );
+            mPool->AtlasCopyTexZYX ( 0, node->mValue , vtemp.getPtr() );            
+            
+            // Progress percent
+            leaf_cnt++; perc = int(leaf_cnt*100 / leaf_max);
+            if ( perc != percl ) { verbosef ( "%d%%%% ", perc ); percl = perc; }
+        }
+        vdbNext ( mOVDB, gridtype, isFloat );
+    }
+
+    PERF_POP ();
+    if (mValMin!= 1.0E35 || mValMax != -1.0E35)
+        verbosef ( "\n    Value Range: %f %f\n", mValMin, mValMax );
+
+    UpdateApron ();
+
+    free ( src2 );
+
+    // vdbfile->close ();
+    // delete vdbfile;
+    // delete mOVDB;
+    // mOVDB = 0x0; 
+
+    return true;
+
+#else
+
+    gprintf ( "ERROR: Unable to load .vdb file. OpenVDB library not linked.\n");
+    return false;
+
+#endif
+
+}
+
+
 // Load an OpenVDB file
 // - Supports <5,4,3> (default) and <3,3,3,4> trees
 bool VolumeGVDB::LoadVDB ( std::string fname )
 {
-	
-#ifdef BUILD_OPENVDB
+    PERF_PUSH ( "Load VDB" );   
 
-	openvdb::initialize ();	
-	FloatGrid34::registerGrid();	
-	//FloatGridVF34::registerGrid();
-
-	mOVDB = new OVDBGrid;
-
-	CoordBBox box;
-	Coord orig;
-	Vector3DF p0, p1;
-
-	PERF_PUSH ( "Clear grid" );
-
-	if ( mOVDB->grid543F != 0x0 ) 	mOVDB->grid543F.reset();		
-	if ( mOVDB->grid543VF != 0x0 ) 	mOVDB->grid543VF.reset();		
-	if ( mOVDB->grid34F != 0x0 ) 	mOVDB->grid34F.reset();		
-	if ( mOVDB->grid34VF != 0x0 ) 	mOVDB->grid34VF.reset();				
-
-	PERF_POP ();
-
-	PERF_PUSH ( "Load VDB" );	
-
-	// Read .vdb file	
-
-	verbosef ( "   Reading OpenVDB file.\n" );
-	openvdb::io::File* vdbfile = new openvdb::io::File ( fname );
-	vdbfile->open();	
-	
-	// Read grid		
-	openvdb::GridBase::Ptr baseGrid;
-	openvdb::io::File::NameIterator nameIter = vdbfile->beginName();	
-	std::string name = vdbfile->beginName().gridName();
-	for ( openvdb::io::File::NameIterator nameIter = vdbfile->beginName(); nameIter != vdbfile->endName(); ++nameIter ) {
-		verbosef ( "   Grid: %s\n", nameIter.gridName().c_str() );
-		if ( nameIter.gridName().compare( getScene()->mVName ) == 0 ) name = getScene()->mVName;
-	}	
-	verbosef ( "   Loading Grid: %s\n", name.c_str() );
-	baseGrid = vdbfile->readGrid ( name ); 
-	
-	PERF_POP ();
-
-	// Initialize GVDB config
-	Vector3DF voxelsize;
-	int gridtype = 0;
-
-	bool isFloat = false;
-
-	verbosef ( "   Configuring GVDB.\n");
-	if ( baseGrid->isType< FloatGrid543 >() ) {
-		gridtype = 0;
-		isFloat = true;
-		mOVDB->grid543F = openvdb::gridPtrCast< FloatGrid543 >(baseGrid);	
-		voxelsize.Set ( mOVDB->grid543F->voxelSize().x(), mOVDB->grid543F->voxelSize().y(), mOVDB->grid543F->voxelSize().z() );			
-		Configure ( 5, 5, 5, 4, 3 );
-	}
-	if ( baseGrid->isType< Vec3fGrid543 >() ) {
-		gridtype = 0;
-		isFloat = false;
-		mOVDB->grid543VF = openvdb::gridPtrCast< Vec3fGrid543 >(baseGrid);	
-		voxelsize.Set ( mOVDB->grid543VF->voxelSize().x(), mOVDB->grid543VF->voxelSize().y(), mOVDB->grid543VF->voxelSize().z() );	
-		Configure ( 5, 5, 5, 4, 3 );
-	}	 
-	if ( baseGrid->isType< FloatGrid34 >() ) {
-		gridtype = 1;
-		isFloat = true;
-		mOVDB->grid34F = openvdb::gridPtrCast< FloatGrid34 >(baseGrid);	
-		voxelsize.Set ( mOVDB->grid34F->voxelSize().x(), mOVDB->grid34F->voxelSize().y(), mOVDB->grid34F->voxelSize().z() );	
-		Configure ( 3, 3, 3, 3, 4 );
-	}
-	if ( baseGrid->isType< Vec3fGrid34 >() ) {
-		gridtype = 1;
-		isFloat = false;
-		mOVDB->grid34VF = openvdb::gridPtrCast< Vec3fGrid34 >(baseGrid);	
-		voxelsize.Set ( mOVDB->grid34VF->voxelSize().x(), mOVDB->grid34VF->voxelSize().y(), mOVDB->grid34VF->voxelSize().z() );	
-		Configure ( 3, 3, 3, 3, 4 );
-	}
-	SetVoxelSize ( voxelsize.x, voxelsize.y, voxelsize.z );
-	SetApron ( 1 );
-
-	float pused = MeasurePools ();
-	verbosef( "   Topology Used: %6.2f MB\n", pused );
-	
-	slong leaf;
-	int leaf_start = 0;				// starting leaf		gScene.mVLeaf.x;		
-	int n, leaf_max, leaf_cnt = 0;
-	Vector3DF vclipmin, vclipmax, voffset;
-	vclipmin = getScene()->mVClipMin;
-	vclipmax = getScene()->mVClipMax;	
-
-	// Determine Volume bounds
-	verbosef( "   Compute volume bounds.\n");
-	vdbSkip ( mOVDB, leaf_start, gridtype, isFloat );
-	for (leaf_max=0; vdbCheck ( mOVDB, gridtype, isFloat ); ) {
-		vdbOrigin ( mOVDB, orig, gridtype, isFloat );
-		p0.Set ( orig.x(), orig.y(), orig.z() );
-		if ( p0.x > vclipmin.x && p0.y > vclipmin.y && p0.z > vclipmin.z && p0.x < vclipmax.x && p0.y < vclipmax.y && p0.z < vclipmax.z ) {		// accept condition
-			if ( leaf_max== 0 ) {
-				mVoxMin = p0; mVoxMax = p0; 
-			} else {
-				if ( p0.x < mVoxMin.x ) mVoxMin.x = p0.x;
-				if ( p0.y < mVoxMin.y ) mVoxMin.y = p0.y;
-				if ( p0.z < mVoxMin.z ) mVoxMin.z = p0.z;
-				if ( p0.x > mVoxMax.x ) mVoxMax.x = p0.x;
-				if ( p0.y > mVoxMax.y ) mVoxMax.y = p0.y;
-				if ( p0.z > mVoxMax.z ) mVoxMax.z = p0.z;				
-			}			
-			leaf_max++;
-		}
-		vdbNext ( mOVDB, gridtype, isFloat );
-	}	
-	voffset = mVoxMin * -1;		// offset to positive space (hack)	
-	
-	// Activate Space
-	PERF_PUSH ( "Activate" );	
-	n = 0;
-	verbosef ( "   Activating space.\n");
-
-	vdbSkip ( mOVDB, leaf_start, gridtype, isFloat );
-	for (leaf_max=0; vdbCheck ( mOVDB, gridtype, isFloat ) ; ) {
-			
-		// Read leaf position
-		vdbOrigin ( mOVDB, orig, gridtype, isFloat );
-		p0.Set ( orig.x(), orig.y(), orig.z() );
-		p0 += voffset;
-
-		if ( p0.x > vclipmin.x && p0.y > vclipmin.y && p0.z > vclipmin.z && p0.x < vclipmax.x && p0.y < vclipmax.y && p0.z < vclipmax.z ) {		// accept condition
-			// only accept those in clip volume
-			bool bnew = false;
-			leaf = ActivateSpace ( mRoot, p0, bnew );
-			leaf_ptr.push_back ( leaf );				
-			leaf_pos.push_back ( p0 );
-			if ( leaf_max==0 ) { 
-				mVoxMin = p0; mVoxMax = p0; 
-				verbosef ( "   First leaf: %d  (%f %f %f)\n", leaf_start+n, p0.x, p0.y, p0.z );
-			}
-			leaf_max++;				
-		}
-		vdbNext ( mOVDB, gridtype, isFloat );
-		n++;
-	}	
-
-	// Finish Topology
-	FinishTopology ();
-	
-	PERF_POP ();		// Activate
-
-	// Resize Atlas
-	//verbosef ( "   Create Atlas. Free before: %6.2f MB\n", cudaGetFreeMem() );
-	PERF_PUSH ( "Atlas" );		
-	DestroyChannels ();
-	AddChannel ( 0, T_FLOAT, mApron, F_LINEAR );
-	UpdateAtlas ();
-	PERF_POP ();
-	//verbosef ( "   Create Atlas. Free after:  %6.2f MB, # Leaf: %d\n", cudaGetFreeMem(), leaf_max );
-
-	// Resize temp 3D texture to match leaf res
-	int res0 = getRes ( 0 );	
-	Vector3DI vres0 ( res0, res0, res0 );		// leaf resolution
-	Vector3DF vrange0 = getRange(0);
-	
-	Volume3D vtemp ( mScene ) ;
-	vtemp.Resize ( T_FLOAT, vres0, 0x0, false );
-
-	vclipmin = getScene()->mVClipMin;
-	vclipmax = getScene()->mVClipMax;	
-
-	// Read brick data
-	PERF_PUSH ( "Read bricks" );	
-
-	// Advance to starting leaf		
-	vdbSkip ( mOVDB, leaf_start, gridtype, isFloat );
-
-	float* src;
-	float* src2 = (float*) malloc ( res0*res0*res0*sizeof(float) );		// velocity field
-	float mValMin, mValMax;
-	mValMin = 1.0E35; mValMax = -1.0E35; 
-
-	// Fill atlas from leaf data
-	int percl = 0, perc = 0;
-	verbosef ( "   Loading bricks.\n");
-	for (leaf_cnt=0; vdbCheck ( mOVDB, gridtype, isFloat ); ) {
-
-		// read leaf position
-		vdbOrigin ( mOVDB, orig, gridtype, isFloat );		
-		p0.Set ( orig.x(), orig.y(), orig.z() );
-		p0 += voffset;
-
-		if ( p0.x > vclipmin.x && p0.y > vclipmin.y && p0.z > vclipmin.z && p0.x < vclipmax.x && p0.y < vclipmax.y && p0.z < vclipmax.z ) {		// accept condition			
-			
-			// get leaf	
-			if ( gridtype==0 ) {
-				if ( isFloat ) {
-					mOVDB->buf3U = (*mOVDB->iter543F).buffer();				
-					src = mOVDB->buf3U.data();
-				} else {
-					mOVDB->buf3VU = (*mOVDB->iter543VF).buffer();
-					src = ConvertToScalar ( res0*res0*res0, (float*) mOVDB->buf3VU.data(), src2, mValMin, mValMax );				
-				}			
-			} else {
-				if ( isFloat ) {
-					mOVDB->buf4U = (*mOVDB->iter34F).buffer();				
-					src = mOVDB->buf4U.data();
-				} else {
-					mOVDB->buf4VU = (*mOVDB->iter34VF).buffer();
-					src = ConvertToScalar ( res0*res0*res0, (float*) mOVDB->buf4VU.data(), src2, mValMin, mValMax );				
-				}
-			}			
-			// Copy data from CPU into temporary 3D texture
-			vtemp.SetDomain ( leaf_pos[leaf_cnt], leaf_pos[leaf_cnt] + vrange0 );				
-			vtemp.CommitFromCPU ( src );
-
-			// Copy from 3D texture into Atlas brick
-			Node* node = getNode ( leaf_ptr[leaf_cnt] );
-			mPool->AtlasCopyTexZYX ( 0, node->mValue , vtemp.getPtr() );			
-			
-			// Progress percent
-			leaf_cnt++; perc = int(leaf_cnt*100 / leaf_max);
-			if ( perc != percl ) { verbosef ( "%d%%%% ", perc ); percl = perc; }
-		}
-		vdbNext ( mOVDB, gridtype, isFloat );
-	}
-
-	PERF_POP ();
-	if (mValMin!= 1.0E35 || mValMax != -1.0E35)
-		verbosef ( "\n    Value Range: %f %f\n", mValMin, mValMax );
-
-	UpdateApron ();
-
-	free ( src2 );
-
-	// vdbfile->close ();
-	// delete vdbfile;
-	// delete mOVDB;
-	// mOVDB = 0x0; 
-
-	return true;
-
-#else
-
-	gprintf ( "ERROR: Unable to load .vdb file. OpenVDB library not linked.\n");
-	return false;
-
-#endif
-
+    verbosef ( "   Reading OpenVDB file.\n" );
+    openvdb::io::File* vdbfile = new openvdb::io::File ( fname );
+    vdbfile->open();    
+    
+    // Read grid        
+    openvdb::GridBase::Ptr baseGrid;
+    openvdb::io::File::NameIterator nameIter = vdbfile->beginName();    
+    std::string name = vdbfile->beginName().gridName();
+    for ( openvdb::io::File::NameIterator nameIter = vdbfile->beginName(); nameIter != vdbfile->endName(); ++nameIter ) {
+        verbosef ( "   Grid: %s\n", nameIter.gridName().c_str() );
+        if ( nameIter.gridName().compare( getScene()->mVName ) == 0 ) name = getScene()->mVName;
+    }   
+    verbosef ( "   Loading Grid: %s\n", name.c_str() );
+    baseGrid = vdbfile->readGrid ( name ); 
+    
+    LoadVDB(baseGrid);
+    
+    PERF_POP ();
 }
 
 #ifdef BUILD_OPENVDB
