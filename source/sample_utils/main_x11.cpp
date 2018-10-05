@@ -165,7 +165,7 @@ static void APIENTRY myOpenGLCallback(  GLenum source,
 
  #endif
 //------------------------------------------------------------------------------
-void checkGL( char* msg )
+void checkGL( const char* msg )
 {
     GLenum errCode;
     //const GLubyte* errString;

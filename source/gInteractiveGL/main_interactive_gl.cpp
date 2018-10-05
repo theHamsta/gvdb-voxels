@@ -57,24 +57,27 @@ bool Sample::init()
 	}
 
 	printf ( "Loading VBX. %s\n", scnpath );
-//     char scnpath[1024];
+	//     char scnpath[1024];
 
-    if ( !gvdb.getScene()->FindFile ( "/local/xu29mapu/projects/gvdb-voxels/source/shared_assets/" "bunny.vdb", scnpath ) ) {
-        gprintf ( "Cannot find vdb file.\n" );
-        gerror();
-    }
+	if ( !gvdb.getScene()->FindFile ( "/local/xu29mapu/projects/gvdb-voxels/source/shared_assets/" "bunny.vdb", scnpath ) ) {
+		gprintf ( "Cannot find vdb file.\n" );
+		gerror();
+	}
+
 	gvdb.SetChannelDefault ( 16, 16, 16 );
-    if ( !gvdb.LoadVDB ( scnpath ) ) {                  // Load OpenVDB format
-        gerror();
-    }
-// 	gvdb.LoadVBX ( scnpath );
+
+	if ( !gvdb.LoadVDB ( scnpath ) ) {                  // Load OpenVDB format
+		gerror();
+	}
+
+	// 	gvdb.LoadVBX ( scnpath );
 
 	// Set volume params
 	gvdb.SetTransform( m_pretrans, m_scale, m_angs, m_trans );
 	gvdb.getScene()->SetSteps ( .25, 16, .25 );				// Set raycasting steps
 	gvdb.getScene()->SetExtinct ( -1.0f, 1.5f, 0.0f );		// Set volume extinction
 	gvdb.getScene()->SetVolumeRange ( 0.1f, 0.0f, .5f );	// Set volume value range
-    gvdb.getScene()->SetVolumeRange ( 0.0f, 1.0f, -1.0f );  // Set volume value range (for a level set)
+	gvdb.getScene()->SetVolumeRange ( 0.0f, 1.0f, -1.0f );  // Set volume value range (for a level set)
 	gvdb.getScene()->SetCutoff ( 0.005f, 0.005f, 0.0f );
 	gvdb.getScene()->SetBackgroundClr ( 0.1f, 0.2f, 0.4f, 1.0 );
 	gvdb.getScene()->LinearTransferFunc( 0.00f, 0.25f, Vector4DF( 0, 0, 0, 0 ), Vector4DF( 1, 0, 0, 0.05f ) );
@@ -82,16 +85,16 @@ bool Sample::init()
 	gvdb.getScene()->LinearTransferFunc( 0.50f, 0.75f, Vector4DF( 1, .5f, 0, 0.1f ), Vector4DF( 1, 1, 0, 0.15f ) );
 	gvdb.getScene()->LinearTransferFunc( 0.75f, 1.00f, Vector4DF( 1, 1, 0, 0.15f ), Vector4DF( 1, 1, 1, 0.2f ) );
 	gvdb.CommitTransferFunc ();
-//     gvdb.getScene()->SetSteps ( 0.25, 16, 0.25 );               // Set raycasting steps
-//     gvdb.getScene()->SetExtinct ( -1.0f, 1.5f, 0.0f );      // Set volume extinction
-//     gvdb.getScene()->SetVolumeRange ( 0.0f, 1.0f, -1.0f );  // Set volume value range (for a level set)
-//     gvdb.getScene()->SetCutoff ( 0.005f, 0.01f, 0.0f );
-//     gvdb.getScene()->LinearTransferFunc ( 0.00f, 0.25f, Vector4DF( 1, 1, 0, 0.05f ), Vector4DF( 1, 1, 0, 0.03f ) );
-//     gvdb.getScene()->LinearTransferFunc ( 0.25f, 0.50f, Vector4DF( 1, 1, 1, 0.03f ), Vector4DF( 1, 0, 0, 0.02f ) );
-//     gvdb.getScene()->LinearTransferFunc ( 0.50f, 0.75f, Vector4DF( 1, 0, 0, 0.02f ), Vector4DF( 1, .5f, 0, 0.01f ) );
-//     gvdb.getScene()->LinearTransferFunc ( 0.75f, 1.00f, Vector4DF( 1, .5f, 0, 0.01f ), Vector4DF( 0, 0, 0, 0.005f ) );
-//     gvdb.getScene()->SetBackgroundClr ( 0, 0, 0, 1 );
-//     gvdb.CommitTransferFunc ();
+	//     gvdb.getScene()->SetSteps ( 0.25, 16, 0.25 );               // Set raycasting steps
+	//     gvdb.getScene()->SetExtinct ( -1.0f, 1.5f, 0.0f );      // Set volume extinction
+	//     gvdb.getScene()->SetVolumeRange ( 0.0f, 1.0f, -1.0f );  // Set volume value range (for a level set)
+	//     gvdb.getScene()->SetCutoff ( 0.005f, 0.01f, 0.0f );
+	//     gvdb.getScene()->LinearTransferFunc ( 0.00f, 0.25f, Vector4DF( 1, 1, 0, 0.05f ), Vector4DF( 1, 1, 0, 0.03f ) );
+	//     gvdb.getScene()->LinearTransferFunc ( 0.25f, 0.50f, Vector4DF( 1, 1, 1, 0.03f ), Vector4DF( 1, 0, 0, 0.02f ) );
+	//     gvdb.getScene()->LinearTransferFunc ( 0.50f, 0.75f, Vector4DF( 1, 0, 0, 0.02f ), Vector4DF( 1, .5f, 0, 0.01f ) );
+	//     gvdb.getScene()->LinearTransferFunc ( 0.75f, 1.00f, Vector4DF( 1, .5f, 0, 0.01f ), Vector4DF( 0, 0, 0, 0.005f ) );
+	//     gvdb.getScene()->SetBackgroundClr ( 0, 0, 0, 1 );
+	//     gvdb.CommitTransferFunc ();
 
 
 	// Create Camera
@@ -108,7 +111,7 @@ bool Sample::init()
 	// Add render buffer
 	nvprintf ( "Creating screen buffer. %d x %d\n", w, h );
 	gvdb.AddRenderBuf ( 0, w, h, 4 );
-    gvdb.Render ( SHADE_LEVELSET, 0, 0 );           // Render as volume
+	gvdb.Render ( SHADE_LEVELSET, 0, 0 );           // Render as volume
 
 	// Create opengl texture for display
 	// This is a helper func in sample utils (not part of gvdb),

@@ -39,7 +39,7 @@
 	#define MIN_RUNTIME_VERSION		4010
 	#define MIN_COMPUTE_VERSION		0x20
 	extern void				StartCuda( int devsel, CUcontext ctxsel, CUdevice& dev, CUcontext& ctx, CUstream* strm, bool verbose );
-	extern GVDB_API bool	cudaCheck ( CUresult e, char* obj, char* method, char* apicall, char* arg, bool bDebug);
+	extern GVDB_API bool	cudaCheck ( CUresult e,  const char* obj, const char* method,const char* apicall, const char* arg, bool bDebug);
 	extern GVDB_API nvdb::Vector3DF cudaGetMemUsage();
     namespace nvdb {
 
@@ -152,7 +152,7 @@
 		void	AllocateAtlasMap(int stride, Vector3DI axiscnt);
 		void	PoolCommitAtlasMap();
 		char*	getAtlasMapNode (uchar chan, Vector3DI val);
-		CUdeviceptr getAtlasMapGPU(uchar chan) { return (mAtlasMap.size()==0) ? static_cast<CUdeviceptr >(NULL) : mAtlasMap[chan].gpu; }
+		CUdeviceptr getAtlasMapGPU(uchar chan) { return (mAtlasMap.size()==0) ? static_cast<CUdeviceptr>(NULL) : mAtlasMap[chan].gpu; }
 
 		// Neighbor Table
 		void	AllocateNeighbors(int cnt);		

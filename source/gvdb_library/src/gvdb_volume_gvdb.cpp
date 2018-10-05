@@ -72,6 +72,7 @@ using namespace nvdb;
 
 #define	MRES	2048
 
+#include <exception>
 // #ifdef BUILD_OPENVDB
 	// OpenVDB helper
 	class OVDBGrid {
@@ -2162,8 +2163,6 @@ bool VolumeGVDB::LoadVDB(openvdb::GridBase::Ptr baseGrid)
     
 #ifdef BUILD_OPENVDB
 
-    openvdb::initialize (); 
-    FloatGrid34::registerGrid();    
     //FloatGridVF34::registerGrid();
 
     mOVDB = new OVDBGrid;
@@ -2189,33 +2188,36 @@ bool VolumeGVDB::LoadVDB(openvdb::GridBase::Ptr baseGrid)
     bool isFloat = false;
 
     verbosef ( "   Configuring GVDB.\n");
+    if(!baseGrid) {
+            throw std::runtime_error("Grid is null");
+    }
+    
     if ( baseGrid->isType< FloatGrid543 >() ) {
         gridtype = 0;
         isFloat = true;
         mOVDB->grid543F = openvdb::gridPtrCast< FloatGrid543 >(baseGrid);   
         voxelsize.Set ( mOVDB->grid543F->voxelSize().x(), mOVDB->grid543F->voxelSize().y(), mOVDB->grid543F->voxelSize().z() );         
         Configure ( 5, 5, 5, 4, 3 );
-    }
-    if ( baseGrid->isType< Vec3fGrid543 >() ) {
+    } else if ( baseGrid->isType< Vec3fGrid543 >() ) {
         gridtype = 0;
         isFloat = false;
         mOVDB->grid543VF = openvdb::gridPtrCast< Vec3fGrid543 >(baseGrid);  
         voxelsize.Set ( mOVDB->grid543VF->voxelSize().x(), mOVDB->grid543VF->voxelSize().y(), mOVDB->grid543VF->voxelSize().z() );  
         Configure ( 5, 5, 5, 4, 3 );
-    }    
-    if ( baseGrid->isType< FloatGrid34 >() ) {
+    }   else if ( baseGrid->isType< FloatGrid34 >() ) {
         gridtype = 1;
         isFloat = true;
         mOVDB->grid34F = openvdb::gridPtrCast< FloatGrid34 >(baseGrid); 
         voxelsize.Set ( mOVDB->grid34F->voxelSize().x(), mOVDB->grid34F->voxelSize().y(), mOVDB->grid34F->voxelSize().z() );    
         Configure ( 3, 3, 3, 3, 4 );
-    }
-    if ( baseGrid->isType< Vec3fGrid34 >() ) {
+    } else if ( baseGrid->isType< Vec3fGrid34 >() ) {
         gridtype = 1;
         isFloat = false;
         mOVDB->grid34VF = openvdb::gridPtrCast< Vec3fGrid34 >(baseGrid);    
         voxelsize.Set ( mOVDB->grid34VF->voxelSize().x(), mOVDB->grid34VF->voxelSize().y(), mOVDB->grid34VF->voxelSize().z() ); 
         Configure ( 3, 3, 3, 3, 4 );
+    } else{
+            throw std::runtime_error("Unkown grid format");
     }
     SetVoxelSize ( voxelsize.x, voxelsize.y, voxelsize.z );
     SetApron ( 1 );
@@ -2286,6 +2288,7 @@ bool VolumeGVDB::LoadVDB(openvdb::GridBase::Ptr baseGrid)
     FinishTopology ();
     
     PERF_POP ();        // Activate
+    // Activate Space
 
     // Resize Atlas
     //verbosef ( "   Create Atlas. Free before: %6.2f MB\n", cudaGetFreeMem() );
@@ -2309,6 +2312,7 @@ bool VolumeGVDB::LoadVDB(openvdb::GridBase::Ptr baseGrid)
 
     // Read brick data
     PERF_PUSH ( "Read bricks" );    
+    // Activate Space
 
     // Advance to starting leaf     
     vdbSkip ( mOVDB, leaf_start, gridtype, isFloat );
@@ -2395,19 +2399,19 @@ bool VolumeGVDB::LoadVDB ( std::string fname )
     PERF_PUSH ( "Load VDB" );   
 
     verbosef ( "   Reading OpenVDB file.\n" );
-    openvdb::io::File* vdbfile = new openvdb::io::File ( fname );
-    vdbfile->open();    
+    openvdb::io::File vdbfile =  openvdb::io::File ( fname );
+    vdbfile.open();    
     
     // Read grid        
     openvdb::GridBase::Ptr baseGrid;
-    openvdb::io::File::NameIterator nameIter = vdbfile->beginName();    
-    std::string name = vdbfile->beginName().gridName();
-    for ( openvdb::io::File::NameIterator nameIter = vdbfile->beginName(); nameIter != vdbfile->endName(); ++nameIter ) {
+    openvdb::io::File::NameIterator nameIter = vdbfile.beginName();    
+    std::string name = vdbfile.beginName().gridName();
+    for ( openvdb::io::File::NameIterator nameIter = vdbfile.beginName(); nameIter != vdbfile.endName(); ++nameIter ) {
         verbosef ( "   Grid: %s\n", nameIter.gridName().c_str() );
         if ( nameIter.gridName().compare( getScene()->mVName ) == 0 ) name = getScene()->mVName;
     }   
     verbosef ( "   Loading Grid: %s\n", name.c_str() );
-    baseGrid = vdbfile->readGrid ( name ); 
+    baseGrid = vdbfile.readGrid ( name ); 
     
     LoadVDB(baseGrid);
     
@@ -2508,6 +2512,15 @@ bool VolumeGVDB::FindFile ( std::string fname, char* path )
 // - Default transfer function and settings
 void VolumeGVDB::Initialize ()
 {
+#ifdef BUILD_OPENVDB
+    openvdb::initialize (); 
+    try{
+        FloatGrid34::registerGrid();    
+    }catch(...) {
+        
+    }
+#endif
+    
 	PUSH_CTX
 
 	// Create Pool Allocator
