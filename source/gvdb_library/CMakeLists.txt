@@ -185,10 +185,10 @@ endif()
 ################################################################
 # Install Binaries, Shaders and PTX
 #
-if ( USE_OPENVDB ) 
-    package_openvdb_binaries()
-   _INSTALL ( FILES ${OPENVDB_BINARIES} SOURCE ${OPENVDB_LIB_DIR} DESTINATION ${EXECUTABLE_OUTPUT_PATH} OUTPUT INSTALL_LIST  )
-endif()
+# if ( USE_OPENVDB ) 
+    # package_openvdb_binaries()
+#    _INSTALL ( FILES ${OPENVDB_BINARIES} SOURCE ${OPENVDB_LIB_DIR} DESTINATION ${EXECUTABLE_OUTPUT_PATH} OUTPUT INSTALL_LIST  )
+# endif()
 file( GLOB SHADERS shaders/*.glsl)
 file( GLOB HEADER_FILES src/*.h )
 file( GLOB CUH_FILES kernels/*.cuh )
